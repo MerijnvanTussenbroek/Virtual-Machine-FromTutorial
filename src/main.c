@@ -45,12 +45,10 @@ int8 map(Opcode o)
 }
 
 VM *virtualMachine()
-{ //Program *pr, int16 programSize
+{
     VM *p;
-    //Program *programPointer;
     int16 size;
 
-    //assert((pr) && (programSize));
 
     size = $2 sizeof(struct s_vm);
     p = (VM *)malloc($i size);
@@ -61,17 +59,14 @@ VM *virtualMachine()
     }
     zero($1 p, size);
 
-    /*
-    programPointer = (Program *)malloc($i size);
-    if(!programPointer)
+    p->m = malloc(65535);
+    if(!(p->m))
     {
         free(p);
         errno = ErrMem;
-
-        return (VM *)0;
+        return NULL;
     }
-    copy(programPointer,pr, programSize);
-    */
+    zero(p->m,65535);
 
     return p;
 }
@@ -80,8 +75,7 @@ Program *examplePorgram(VM *vm)
 {
     Program *program;
     Instruction *i1, *i2;
-    Args *a1;
-    int16 s1, s2, sa1;
+    int16 s1, s2;
 
     s1 = map(mov);
     s2 = map(nop);
@@ -95,46 +89,41 @@ Program *examplePorgram(VM *vm)
     zero($1 i2, s2);
 
     i1->o = mov;
-    sa1 = (s1 - 1);
-    if(s1){
-        a1 = (Args *)malloc($i sa1);
-        assert(a1);
-        zero(a1, sa1);
-        *a1         = 0x00;
-        *(a1 + 1)   = 0x05;
-    }
+    i1->a[0] = 0x00;
+    i1->a[1] = 0x05;
 
-    program = vm->s;
-    copy($1 program,$1 i1, 1);
-    program += 1;
-
-    if(sa1 && a1){
-        copy($1 program, $1 a1, sa1);
-        program += sa1;
-        free(a1);
-    }
+    program = vm->m;
+    copy($1 program, $1 i1, 1);
+    program += s1;
 
     i2->o = nop;
     copy($1 program, $1 i2, 1);
+    program += s2;
+
+    vm->brk = (s1 + s2);
 
     free(i1);
     free(i2);
 
-    return vm->s;
+    return (Program *)&vm->m;
+}
+
+void execute(VM* vm)
+{
+
 }
 
 int main(int argc, char **argv)
 {
-    int8 size;
     Program *prog;
     VM *virtualmachine;
 
-    size = (map(mov) + map(nop));
     virtualmachine = virtualMachine();
     prog = examplePorgram(virtualmachine);
 
     printf("vm = %p\n", virtualmachine);
     printf("program = %p\n", prog);
+
     getchar();
 
 

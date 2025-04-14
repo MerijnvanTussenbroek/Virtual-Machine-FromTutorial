@@ -42,11 +42,12 @@ struct s_cpu{
 };
 typedef struct s_cpu CPU;
 
-typedef int8 Memory[((unsigned int)(-1))];
+typedef int8 *Memory;
 
 enum e_opcode {
     mov = 0x01,
-    nop = 0x02
+    nop = 0x02,
+    hlt = 0x03
 };
 typedef enum e_opcode Opcode;
 
@@ -70,9 +71,8 @@ typedef int8 Program;
 
 struct s_vm {
     CPU c;
-    Memory s;
-    int16 *brk;
-    Program *p;
+    Memory m;
+    int16 brk;
 };
 
 typedef struct s_vm VM;
@@ -80,11 +80,13 @@ typedef struct s_vm VM;
 typedef Memory *Stack;
 
 static IM instrmap[] = {
-    { mov, 0x03},
-    { nop, 0x01}
+    { mov, 0x03 },
+    { nop, 0x01 },
+    { hlt, 0x01 }
 };
 #define IMs (sizeof(instrmap) / sizeof(struct s_instrmap))
 
+void execute(VM*);
  Program *examplePorgram(VM*);
 int8 map(Opcode o);
 VM *virtualMachine();

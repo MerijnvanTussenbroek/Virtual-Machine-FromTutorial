@@ -24,3 +24,18 @@ void copy(int8 *dst, int8 *src, int16 size) {
 
     return;
 }
+
+void printhex(int8 *str, int16 size, int8 delim) {
+    int8 *p;
+    int16 n;
+
+    for (p=str, n=size; n; n--, p++) {
+        printf("%.02x", *p);
+        if (delim)
+            printf("%c", delim);
+        fflush(stdout);
+    }
+    printf("\n");
+
+    return;
+}
