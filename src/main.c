@@ -3,29 +3,6 @@
 #include "main.h"
 #include "birchutils.h"
 
-/*
-    16 bit
-        AX general registers
-        BX
-        CX
-        DX
-        SP -- stack pointer
-        IP -- instruction pointer
-    65 KB memory
-    (Serial COM port)
-    (Floppy drive)
-*/
-
-/*
-    (0000 0000) instruction
-    0000 0000
-    0000 0000
-
-    3 bytes
-
-    the rest is the value of the instruction
-*/
-
 int8 map(Opcode o)
 {
     int8 n, ret;
@@ -74,43 +51,139 @@ VM *virtualMachine()
 Program *examplePorgram(VM *vm)
 {
     Program *program;
-    Instruction *i1, *i2;
-    int16 s1, s2;
+    Instruction *i1, *i2, *i3;
+    int16 s1, s2, s3;
 
     s1 = map(mov);
     s2 = map(nop);
+    s3 = map(hlt);
 
     i1 = (Instruction *)malloc($i s1);
     i2 = (Instruction *)malloc($i s2);
+    i3 = (Instruction *)malloc($i s3);
 
-    assert(i1 && i2);
+    assert(i1 && i2 && i3);
 
     zero($1 i1, s1);
     zero($1 i2, s2);
+    zero($1 i3, s3);
 
     i1->o = mov;
     i1->a[0] = 0x00;
     i1->a[1] = 0x05;
 
     program = vm->m;
-    copy($1 program, $1 i1, 1);
+    copy($1 program, $1 i1, s1);
     program += s1;
 
     i2->o = nop;
-    copy($1 program, $1 i2, 1);
+    copy($1 program, $1 i2, s2);
     program += s2;
 
-    vm->brk = (s1 + s2);
+    i3->o = hlt;
+    copy($1 program, $1 i3, s3);
+    program += s3;
+
+    vm->brk = (s1 + s2 + s3);
+    vm $ip = (Reg)(vm->m);
+    vm $sp = (Reg) -1;
 
     free(i1);
     free(i2);
+    free(i3);
 
     return (Program *)&vm->m;
+}
+
+void movInstr(VM* vm, Args a1, Args a2)
+{
+    vm $ax = (Reg) (a1 << 4) | a2;
+
+    return;
+}
+
+void execInstr(VM* vm, Instruction* instruction)
+{
+
+    Args a1, a2;
+    int16 size = map(instruction->o);
+
+    a1 = a2 = 0;
+
+    if(size == 0x03){
+        a1 = instruction->a[0];
+        a1 = instruction->a[1];
+    }
+
+    switch(instruction->o)
+    {
+        case mov:
+            movInstr(vm, a1, a2);
+            break;
+        case nop:
+            //nopInstr(vm);
+            break;
+        case hlt:
+            //hltInstr(vm);
+            //error(vm, SysHlt);
+            break;
+    }
+
+    return;
 }
 
 void execute(VM* vm)
 {
 
+    Program* programPointer;
+    Instruction *instrPointer;
+
+    int16 size;
+
+    assert(vm && *vm->m);
+
+    programPointer = vm->m;
+
+    while(*programPointer != (Opcode)hlt && (programPointer <= vm->brk))
+    {
+        instrPointer = (Instruction *)programPointer;
+        size = map(instrPointer->o);
+        execInstr(vm, instrPointer);
+
+        vm $ip += size;
+        programPointer += size;
+    }
+
+    if(programPointer > vm->brk)
+    {
+        segFault(vm);
+    }
+}
+
+void error(VM* vm, errorCode e)
+{
+    int8 exitCode = -1;
+
+    if(vm){
+        free(vm->m);
+        free(vm);
+    }
+
+    switch(e)
+    {
+        case ErrSegV:
+            fprintf(stderr, "VM Segmentation fault\n");
+            break;
+        case SysHlt:
+            fprintf(stderr, "VM finished program via hlt instruction\n");
+            exitCode = 0;
+            break;
+        default:
+            break;
+    }
+
+
+    exit(exitCode);
 }
 
 int main(int argc, char **argv)
@@ -118,11 +191,14 @@ int main(int argc, char **argv)
     Program *prog;
     VM *virtualmachine;
 
+
     virtualmachine = virtualMachine();
     prog = examplePorgram(virtualmachine);
 
     printf("vm = %p\n", virtualmachine);
     printf("program = %p\n", prog);
+
+    printf("ax = %.16hx\n",$i virtualmachine $ax);
 
     getchar();
 

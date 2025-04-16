@@ -10,7 +10,11 @@
 #include <assert.h>
 #include <errno.h>
 
-#define ErrMem          0x01
+#define noErr           0x00
+#define ErrMem          0x01 // 00 01
+#define ErrSegV         0x02 // 00 10
+#define SysHlt          0x03
+
 #define NoArgs          { 0x00, 0x00 }
 
 typedef unsigned char int8;
@@ -24,6 +28,16 @@ typedef unsigned long long int int64;
 #define $8 (int64)
 #define $c (char *)
 #define $i (int)
+
+#define $ax ->c.r.ax
+#define $bx ->c.r.bx
+#define $cx ->c.r.cx
+#define $dx ->c.r.dx
+#define $sp ->c.r.sp
+#define $ip ->c.r.ip
+
+
+#define segFault(x)     error((x), ErrSegV);
 
 typedef unsigned short int Reg;
 
@@ -49,7 +63,7 @@ enum e_opcode {
     nop = 0x02,
     hlt = 0x03
 };
-typedef enum e_opcode Opcode;
+typedef int8 Opcode;
 
 struct s_instrmap{
     Opcode o;
@@ -60,9 +74,8 @@ typedef struct s_instrmap IM;
 typedef int8 Args;
 
 struct s_instruction {
-    // an instruction is a command to the CPU
     Opcode o;
-    Args a[]; // 0 to 2 bytes
+    Args a[]; //either 0 or 2 bytes
 };
 
 typedef struct s_instruction Instruction;
@@ -86,6 +99,11 @@ static IM instrmap[] = {
 };
 #define IMs (sizeof(instrmap) / sizeof(struct s_instrmap))
 
+typedef unsigned char errorCode;
+
+void error(VM*, errorCode);
+void movInstr(VM*, Args, Args);
+void execInstr(VM*, Instruction*);
 void execute(VM*);
  Program *examplePorgram(VM*);
 int8 map(Opcode o);
