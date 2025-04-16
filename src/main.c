@@ -48,7 +48,7 @@ VM *virtualMachine()
     return p;
 }
 
-Program *examplePorgram(VM *vm)
+void examplePorgram(VM *vm)
 {
     Program *program;
     Instruction *i1, *i2, *i3;
@@ -91,8 +91,6 @@ Program *examplePorgram(VM *vm)
     free(i1);
     free(i2);
     free(i3);
-
-    return (Program *)&vm->m;
 }
 
 void movInstr(VM* vm, Args a1, Args a2)
@@ -112,7 +110,7 @@ void execInstr(VM* vm, Instruction* instruction)
 
     if(size == 0x03){
         a1 = instruction->a[0];
-        a1 = instruction->a[1];
+        a2 = instruction->a[1];
     }
 
     switch(instruction->o)
@@ -125,7 +123,7 @@ void execInstr(VM* vm, Instruction* instruction)
             break;
         case hlt:
             //hltInstr(vm);
-            //error(vm, SysHlt);
+            printf("\nProgram has finished\n");
             break;
     }
 
@@ -138,14 +136,14 @@ void execute(VM* vm)
     Program* programPointer;
     Instruction *instrPointer;
 
+    Program* beginning = programPointer;
+
     int16 size;
 
     assert(vm && *vm->m);
 
     programPointer = vm->m;
-
-    while(*programPointer != (Opcode)hlt && (programPointer <= vm->brk))
-    {
+    do{
         instrPointer = (Instruction *)programPointer;
         size = map(instrPointer->o);
         execInstr(vm, instrPointer);
@@ -153,8 +151,12 @@ void execute(VM* vm)
         vm $ip += size;
         programPointer += size;
     }
+    while(*programPointer != (Opcode)hlt);
 
-    if(programPointer > vm->brk)
+    instrPointer = (Instruction *)programPointer;
+    execInstr(vm, instrPointer);
+
+    if(programPointer > vm->brk + beginning + 1)
     {
         segFault(vm);
     }
@@ -182,23 +184,32 @@ void error(VM* vm, errorCode e)
             break;
     }
 
-
+    getchar();
     exit(exitCode);
 }
 
 int main(int argc, char **argv)
 {
-    Program *prog;
+    (void)argc;
+    (void) argv;
     VM *virtualmachine;
 
-
     virtualmachine = virtualMachine();
-    prog = examplePorgram(virtualmachine);
+    examplePorgram(virtualmachine);
 
     printf("vm = %p\n", virtualmachine);
-    printf("program = %p\n", prog);
+    printf("\nprogram in vm = %p\n", virtualmachine->m);
+    printf("brk in vm = %d\n", virtualmachine->brk);
+    printhex($1 virtualmachine->m, 3 + 1 + 1, ' ');
 
-    printf("ax = %.16hx\n",$i virtualmachine $ax);
+    execute(virtualmachine);
+
+    printf("\nax = %.16hx\n",$i virtualmachine $ax);
+    printf("bx = %.16hx\n",$i virtualmachine $bx);
+    printf("cx = %.16hx\n",$i virtualmachine $cx);
+    printf("dx = %.16hx\n",$i virtualmachine $dx);
+    printf("ip = %.16hx\n",$i virtualmachine $ip);
+    printf("sp = %.16hx\n",$i virtualmachine $sp);
 
     getchar();
 

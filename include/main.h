@@ -105,7 +105,7 @@ void error(VM*, errorCode);
 void movInstr(VM*, Args, Args);
 void execInstr(VM*, Instruction*);
 void execute(VM*);
- Program *examplePorgram(VM*);
+ void examplePorgram(VM*);
 int8 map(Opcode o);
 VM *virtualMachine();
 int main(int, char**);
