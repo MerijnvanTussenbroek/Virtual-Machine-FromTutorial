@@ -3,10 +3,7 @@
 
 #define _GNU_SOURCE
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include <assert.h>
 #include <errno.h>
 #include <stdarg.h>
@@ -84,7 +81,9 @@ enum e_opcode {
     stg = 0x12, // set greater flag
     clg = 0x13, // clear greater flag
     stl = 0x14, // set less flag
-    cll = 0x15 // clear less flag
+    cll = 0x15, // clear less flag
+    push = 0x16,// push command
+    pop = 0x17 // pop command
 };
 typedef int8 Opcode;
 
@@ -125,7 +124,10 @@ static IM instrmap[] = {
     { stg, 0x01 },
     { clg, 0x01 },
     { stl, 0x01 },
-    { cll, 0x01 }
+    { cll, 0x01 },
+    { pop, 0x03 }, // for the push and pop instructions
+    { push, 0x03 } // only 1 byte of the 2 available are used
+
 };
 #define IMs (sizeof(instrmap) / sizeof(struct s_instrmap))
 
@@ -134,6 +136,8 @@ typedef unsigned char errorCode;
 void error(VM*, errorCode); // In the event an error occurs
 
 void movInstr(VM*, Opcode*, Args, Args); // function for the move instruction
+void pushInstr(VM*, Args, Args);
+void popInstr(VM*, Args, Args);
 void steInstr(VM*);
 void stgInstr(VM*);
 void stlInstr(VM*);

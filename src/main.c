@@ -3,10 +3,13 @@
 
 VM *virtualMachine()
 {
+
+    // initializing the virtual machine
     VM *p;
     int16 size;
 
 
+    //allocate memory for the vm struct
     size = $2 sizeof(struct s_vm);
     p = (VM *)malloc($i size);
     if(!p)
@@ -16,6 +19,7 @@ VM *virtualMachine()
     }
     zero($1 p, size);
 
+    //allocate memory for the memory of the virtual machine
     p->m = malloc(65535);
     if(!(p->m))
     {
@@ -23,6 +27,7 @@ VM *virtualMachine()
         errno = ErrMem;
         return NULL;
     }
+    //zero out all memory
     zero(p->m,65535);
 
     return p;
@@ -30,6 +35,7 @@ VM *virtualMachine()
 
 Program* instr(Instruction *instr)
 {
+    // Initialize an instruction
     Program* program;
 
     int8 size = map(instr->o);
@@ -44,6 +50,7 @@ Program* instr(Instruction *instr)
 
 Program* loadProgram(VM* vm, ...)
 {
+    // Load the entire program
     Program *p, *instr;
 
     va_list ap;
@@ -54,6 +61,7 @@ Program* loadProgram(VM* vm, ...)
 
     va_start(ap, vm);
     p = vm->m;
+    // Loop over all the instruction inputs
     do{
         instr = va_arg(ap, Program*);
         opc = (Opcode)*instr;
@@ -73,6 +81,7 @@ Program* loadProgram(VM* vm, ...)
 
 void examplePorgram(VM *vm)
 {
+    // Initialize an example program
     Program *program;
     Instruction *i1, *i2, *i3, *i4, *i5, *i6, *i7;
     int16 s1, s2, s3;
@@ -132,8 +141,10 @@ void examplePorgram(VM *vm)
 
 void movInstr(VM* vm, Opcode* opc, Args a1, Args a2)
 {
+    // Calculate final product
     int16 dst = (a1 << 8) | a2;
 
+    // Decide which register it goes into
     switch(*opc)
     {
         case mov: // mov to ax
@@ -168,6 +179,7 @@ void movInstr(VM* vm, Opcode* opc, Args a1, Args a2)
     return;
 }
 
+// All the flag changing instructions
 void steInstr(VM* vm)
 {
     vm $fl |= 0x04;
@@ -199,9 +211,83 @@ void cllInstr(VM* vm)
     vm $fl &= ~(1 << 0);
 }
 
+void pushInstr(VM* vm, Args a1, Args a2)
+{
+    int16 src;
+    int16 *dst;
+    void* mem;
+
+    // Check if the stack pointer is less than the breakline, if so 
+    if(vm $sp < (vm->brk - 2))
+        error(vm, ErrSegV);
+    
+    // Retrieve the value from the register
+    switch(a1)
+    {
+        case 0x00: // ax
+            src = vm $ax;
+            break;
+        case 0x01: // bx
+            src = vm $bx;
+            break;
+        case 0x02: // cx
+            src = vm $cx;
+            break;
+        case 0x03: // dx
+            src = vm $dx;
+            break;
+        default:
+            error(vm, BadInstr);
+            break;
+    }
+
+    vm $sp -= 2;
+    mem = (vm->m + vm $sp);
+    dst = mem;
+    *dst = src;
+
+    return;
+}
+
+void popInstr(VM* vm, Args a1, Args a2)
+{
+    int16 *src;
+    void* mem;
+
+    if(vm $sp < (vm->brk - 2))
+        error(vm, ErrSegV);
+
+    mem = vm->m + vm $sp;
+    src = mem;
+    
+    // Change the selected register
+    switch(a1)
+    {
+        case 0x00: // ax
+            vm $ax = *src;
+            break;
+        case 0x01: // bx
+            vm $bx = *src;
+            break;
+        case 0x02: // cx
+            vm $cx = *src;
+            break;
+        case 0x03: // dx
+            vm $dx = *src;
+            break;
+        default:
+            error(vm, BadInstr);
+            break;
+    }
+
+    vm $sp += 2;
+
+    return;
+}
+
+// Executes a single instruction
 void execInstr(VM* vm, Instruction* instruction)
 {
-
     Args a1, a2;
     int16 size = map(instruction->o);
 
@@ -243,14 +329,20 @@ void execInstr(VM* vm, Instruction* instruction)
         case cll:
             cllInstr(vm);
             break;
+        case push:
+            pushInstr(vm, a1, a2);
+            break;
+        case pop:
+            popInstr(vm, a1, a2);
+            break;
     }
 
     return;
 }
 
+// Executes all the instructions using a while loop
 void execute(VM* vm)
 {
-
     Program* programPointer;
     Instruction *instrPointer;
 
@@ -285,6 +377,7 @@ void execute(VM* vm)
     }
 }
 
+// In the event an error occurs, but not of the program, but the virtual machine
 void error(VM* vm, errorCode e)
 {
     int8 exitCode = -1;
