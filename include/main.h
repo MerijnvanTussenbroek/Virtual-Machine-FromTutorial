@@ -9,11 +9,13 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <errno.h>
+#include <stdarg.h>
 
 #define noErr           0x00
-#define ErrMem          0x01 // 00 01
-#define ErrSegV         0x02 // 00 10
+#define ErrMem          0x01 
+#define ErrSegV         0x02 
 #define SysHlt          0x03
+#define BadInstr        0x04
 
 #define NoArgs          { 0x00, 0x00 }
 
@@ -36,6 +38,11 @@ typedef unsigned long long int int64;
 #define $sp ->c.r.sp
 #define $ip ->c.r.ip
 
+#define $fl ->c.r.flags
+#define equal(x)       (!!((x $fl & 0x04) >> 2))
+#define gt(x)          (!!((x $fl & 0x02) >> 1))
+#define lt(x)          (!!(x $fl & 0x01))
+
 
 #define segFault(x)     error((x), ErrSegV);
 
@@ -48,8 +55,18 @@ struct s_registers{
     Reg dx;
     Reg sp;
     Reg ip;
+    Reg flags;
 };
 typedef struct s_registers Registers;
+
+/*
+
+Reg flags:
+Zero flag - if the result of an operation is zero
+Carry flag - if the result of a math equation needs you to carry the number
+CMP/comparison flag - for storing the result of a comparison
+
+*/
 
 struct s_cpu{
     Registers r;
@@ -59,9 +76,15 @@ typedef struct s_cpu CPU;
 typedef int8 *Memory;
 
 enum e_opcode {
-    mov = 0x01,
-    nop = 0x02,
-    hlt = 0x03
+    nop = 0x01, // no instruction
+    hlt = 0x02, // halt program
+    mov = 0x08, // 0x08 - 0x0f, so 0000 1000 to 0000 1111
+    ste = 0x10, //set equal flag
+    cle = 0x11, // clear equal flag
+    stg = 0x12, // set greater flag
+    clg = 0x13, // clear greater flag
+    stl = 0x14, // set less flag
+    cll = 0x15 // clear less flag
 };
 typedef int8 Opcode;
 
@@ -90,22 +113,38 @@ struct s_vm {
 
 typedef struct s_vm VM;
 
-typedef Memory *Stack;
+typedef Memory Stack;
 
 static IM instrmap[] = {
-    { mov, 0x03 },
     { nop, 0x01 },
-    { hlt, 0x01 }
+    { hlt, 0x01 },
+    { mov, 0x03 },{0x09,0x03},{0x0a,0x03},{0x0b,0x03},
+    { 0x0c,0x03 },{0x0d,0x03},{0x0e,0x03},{0x0f,0x03},
+    { ste, 0x01 },
+    { cle, 0x01 },
+    { stg, 0x01 },
+    { clg, 0x01 },
+    { stl, 0x01 },
+    { cll, 0x01 }
 };
 #define IMs (sizeof(instrmap) / sizeof(struct s_instrmap))
 
 typedef unsigned char errorCode;
 
-void error(VM*, errorCode);
-void movInstr(VM*, Args, Args);
-void execInstr(VM*, Instruction*);
-void execute(VM*);
+void error(VM*, errorCode); // In the event an error occurs
+
+void movInstr(VM*, Opcode*, Args, Args); // function for the move instruction
+void steInstr(VM*);
+void stgInstr(VM*);
+void stlInstr(VM*);
+void cleInstr(VM*);
+void clgInstr(VM*);
+void cllInstr(VM*);
+
+void execInstr(VM*, Instruction*); // executes a single instruction
+void execute(VM*); // executes the program loaded into the memory of the VM
  void examplePorgram(VM*);
-int8 map(Opcode o);
-VM *virtualMachine();
+Program* loadProgram(VM* vm, ...);
+Program* instr(Instruction*);
+VM *virtualMachine(); // Constructor function
 int main(int, char**);

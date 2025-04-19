@@ -39,3 +39,21 @@ void printhex(int8 *str, int16 size, int8 delim) {
 
     return;
 }
+
+int8 map(Opcode o)
+{
+    int8 n, ret;
+    IM *p;
+
+    ret = 0;
+    for(n = IMs, p = instrmap; n; n--, p++)
+    {
+        if(p->o == o)
+        {
+            ret = p->size;
+            break;
+        }
+    }
+
+    return ret;
+}
